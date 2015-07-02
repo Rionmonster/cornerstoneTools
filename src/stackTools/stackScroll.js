@@ -50,6 +50,7 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
             e.data.deltaY = imageDeltaMod;
 
             cornerstoneTools.scroll(element, imageIdIndexOffset);
+            $(element).trigger('CornerstoneImageScroll', { direction: imageIdIndexOffset });
         }
 
         return false; // false = cases jquery to preventDefault() and stopPropagation() this event
@@ -58,6 +59,7 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
     function mouseWheelCallback(e, eventData) {
         var images = -eventData.direction;
         cornerstoneTools.scroll(eventData.element, images);
+        $(eventData.element).trigger('CornerstoneImageScroll', { direction: images });
     }
 
     function onDrag(e) {
@@ -82,6 +84,7 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
             eventData.deltaY = imageDeltaMod;
 
             cornerstoneTools.scroll(element, imageIdIndexOffset);
+            $(element).trigger('CornerstoneImageScroll', { direction: images });
         }
 
         return false; // false = cases jquery to preventDefault() and stopPropagation() this event

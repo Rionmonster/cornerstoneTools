@@ -6693,7 +6693,7 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
         if (cornerstoneTools.isMouseButtonEnabled(eventData.which, e.data.mouseButtonMask)) {
 
             var mouseDragEventData = {
-                deltaY : 0,
+                deltaY: 0,
                 options: e.data.options
             };
             $(eventData.element).on("CornerstoneToolsMouseDrag", mouseDragEventData, mouseDragCallback);
@@ -6714,7 +6714,7 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
         }
         var stackData = toolData.data[0];
 
-        var pixelsPerImage = $(eventData.element).height() / stackData.imageIds.length ;
+        var pixelsPerImage = $(eventData.element).height() / stackData.imageIds.length;
         if (e.data.options !== undefined && e.data.options.stackScrollSpeed !== undefined) {
             pixelsPerImage = e.data.options.stackScrollSpeed;
         }
@@ -6726,6 +6726,7 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
             e.data.deltaY = imageDeltaMod;
 
             cornerstoneTools.scroll(element, imageIdIndexOffset);
+            $(element).trigger('CornerstoneImageScroll', { direction: imageIdIndexOffset });
         }
 
         return false; // false = cases jquery to preventDefault() and stopPropagation() this event
@@ -6734,12 +6735,13 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
     function mouseWheelCallback(e, eventData) {
         var images = -eventData.direction;
         cornerstoneTools.scroll(eventData.element, images);
+        $(eventData.element).trigger('CornerstoneImageScroll', { direction: images });
     }
 
     function onDrag(e) {
         var mouseMoveData = e.originalEvent.detail;
         var eventData = {
-            deltaY : 0
+            deltaY: 0
         };
 
         var element = mouseMoveData.element;
@@ -6758,6 +6760,7 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
             eventData.deltaY = imageDeltaMod;
 
             cornerstoneTools.scroll(element, imageIdIndexOffset);
+            $(element).trigger('CornerstoneImageScroll', { direction: images });
         }
 
         return false; // false = cases jquery to preventDefault() and stopPropagation() this event
@@ -6769,7 +6772,7 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
     cornerstoneTools.stackScrollTouchDrag = cornerstoneTools.touchDragTool(onDrag);
 
     return cornerstoneTools;
-}($, cornerstone, cornerstoneTools)); 
+}($, cornerstone, cornerstoneTools));
 // End Source; src/stackTools/stackScroll.js
 
 // Begin Source: src/stackTools/stackScrollKeyboard.js
@@ -6777,7 +6780,7 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
 
     "use strict";
 
-    if(cornerstoneTools === undefined) {
+    if (cornerstoneTools === undefined) {
         cornerstoneTools = {};
     }
 
@@ -6799,6 +6802,7 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
             images = -1;
         }
         cornerstoneTools.scroll(eventData.element, images);
+        $(eventData.element).trigger('CornerstoneImageScroll', { direction: images });
     }
 
 
@@ -6806,7 +6810,7 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
     cornerstoneTools.stackScrollKeyboard = cornerstoneTools.keyboardTool(keyDownCallback);
 
     return cornerstoneTools;
-}($, cornerstone, cornerstoneTools)); 
+}($, cornerstone, cornerstoneTools));
 // End Source; src/stackTools/stackScrollKeyboard.js
 
 // Begin Source: src/stateManagement/imageIdSpecificStateManager.js
@@ -7577,6 +7581,68 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
 }($, cornerstone, cornerstoneTools)); 
 // End Source; src/synchronization/stackImagePositionSynchronizer.js
 
+// Begin Source: src/synchronization/stackScrollSynchronizer.js
+var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
+
+    "use strict";
+
+    if (cornerstoneTools === undefined) {
+        cornerstoneTools = {};
+    }
+
+    // This function causes any scrolling actions within the stack to propagate to 
+    // all of the other viewports that are synced
+    function stackScrollSynchronizer(synchronizer, sourceElement, targetElement, eventData) {
+       
+        // If the target and source are the same, ignore
+        if (sourceElement === targetElement) {
+            // TODO: Look into incrementing here or pulling the previous index
+            //       as the built-in scrolling may take over
+
+            return;
+        }
+
+        // If there is no event, ignore synchronization
+        if (eventData == undefined) {
+            return;
+        }
+
+        // Target the stack of the target viewport
+        var targetStackToolDataSource = cornerstoneTools.getToolState(targetElement, 'stack');
+        var targetStackData = targetStackToolDataSource.data[0];
+
+        // It's not the same area, so scroll if able
+        var direction = eventData.direction;
+
+        // Get the current index for the stack
+        var newImageIdIndex = targetStackData.currentImageIdIndex;
+
+        // Update the position based on the direction
+        newImageIdIndex = (direction < 0) ? newImageIdIndex + 1 : newImageIdIndex - 1;
+
+        // Ensure the index does not exceed the bounds of the stack
+        newImageIdIndex = Math.min(Math.max(newImageIdIndex, 0), targetStackData.imageIds.length - 1);
+        
+        // If the index has not changed, ignore it
+        if (targetStackData.currentImageIdIndex === newImageIdIndex) {
+            return;
+        }
+
+        // Otherwise load the image
+        cornerstone.loadAndCacheImage(targetStackData.imageIds[newImageIdIndex]).then(function (image) {
+            var viewport = cornerstone.getViewport(targetElement);
+            targetStackData.currentImageIdIndex = newImageIdIndex;
+            synchronizer.displayImage(targetElement, image, viewport);
+        });
+    }
+
+    // module/private exports
+    cornerstoneTools.stackScrollSynchronizer = stackScrollSynchronizer;
+
+    return cornerstoneTools;
+}($, cornerstone, cornerstoneTools));
+// End Source; src/synchronization/stackScrollSynchronizer.js
+
 // Begin Source: src/synchronization/synchronizer.js
 var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
 
@@ -7596,23 +7662,22 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
 
         var ignoreFiredEvents = false;
 
-        function fireEvent(sourceEnabledElement) {
+        function fireEvent(sourceEnabledElement, eventData) {
 
             // Broadcast an event that something changed
             ignoreFiredEvents = true;
             $.each(targetElements, function(index, targetEnabledElement) {
-                handler(that, sourceEnabledElement, targetEnabledElement);
+                handler(that, sourceEnabledElement, targetEnabledElement, eventData);
             });
             ignoreFiredEvents = false;
         }
 
-        function onEvent(e)
+        function onEvent(e, eventData)
         {
             if(ignoreFiredEvents === true) {
-                //console.log("event ignored");
                 return;
             }
-            fireEvent(e.currentTarget);
+            fireEvent(e.currentTarget, eventData);
         }
 
         // adds an element as a source

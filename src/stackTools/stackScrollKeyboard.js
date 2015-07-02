@@ -24,6 +24,7 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
             images = -1;
         }
         cornerstoneTools.scroll(eventData.element, images);
+        $(eventData.element).trigger('CornerstoneImageScroll', { direction: images });
     }
 
 

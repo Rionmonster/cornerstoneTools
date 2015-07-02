@@ -2,7 +2,7 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
 
     "use strict";
 
-    if(cornerstoneTools === undefined) {
+    if (cornerstoneTools === undefined) {
         cornerstoneTools = {};
     }
 
@@ -16,30 +16,28 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
 
         var ignoreFiredEvents = false;
 
-        function fireEvent(sourceEnabledElement) {
+        function fireEvent(sourceEnabledElement, eventData) {
 
             // Broadcast an event that something changed
             ignoreFiredEvents = true;
-            $.each(targetElements, function(index, targetEnabledElement) {
-                handler(that, sourceEnabledElement, targetEnabledElement);
+            $.each(targetElements, function (index, targetEnabledElement) {
+                handler(that, sourceEnabledElement, targetEnabledElement, eventData);
             });
             ignoreFiredEvents = false;
         }
 
-        function onEvent(e)
-        {
-            if(ignoreFiredEvents === true) {
-                //console.log("event ignored");
+        function onEvent(e, eventData) {
+            if (ignoreFiredEvents === true) {
                 return;
             }
-            fireEvent(e.currentTarget);
+            fireEvent(e.currentTarget, eventData);
         }
 
         // adds an element as a source
-        this.addSource = function(element) {
+        this.addSource = function (element) {
             // Return if this element was previously added
             var index = sourceElements.indexOf(element);
-            if(index !== -1) {
+            if (index !== -1) {
                 return;
             }
 
@@ -54,10 +52,10 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
         };
 
         // adds an element as a target
-        this.addTarget = function(element) {
+        this.addTarget = function (element) {
             // Return if this element was previously added
             var index = targetElements.indexOf(element);
-            if(index !== -1) {
+            if (index !== -1) {
                 return;
             }
 
@@ -69,16 +67,16 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
         };
 
         // adds an element as both a source and a target
-        this.add = function(element) {
+        this.add = function (element) {
             that.addSource(element);
             that.addTarget(element);
         };
 
         // removes an element as a source
-        this.removeSource = function(element) {
+        this.removeSource = function (element) {
             // Find the index of this element
             var index = sourceElements.indexOf(element);
-            if(index === -1) {
+            if (index === -1) {
                 return;
             }
 
@@ -93,10 +91,10 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
         };
 
         // removes an element as a target
-        this.removeTarget = function(element) {
+        this.removeTarget = function (element) {
             // Find the index of this element
             var index = targetElements.indexOf(element);
-            if(index === -1) {
+            if (index === -1) {
                 return;
             }
 
@@ -108,23 +106,23 @@ var cornerstoneTools = (function ($, cornerstone, cornerstoneTools) {
         };
 
         // removes an element as both a source and target
-        this.remove = function(element) {
+        this.remove = function (element) {
             that.removeTarget(element);
             that.removeSource(element);
         };
 
         // returns the source elements
-        this.getSourceElements = function() {
+        this.getSourceElements = function () {
             return sourceElements;
         };
 
-        this.displayImage = function(element, image, viewport) {
+        this.displayImage = function (element, image, viewport) {
             ignoreFiredEvents = true;
             cornerstone.displayImage(element, image, viewport);
             ignoreFiredEvents = false;
         };
 
-        this.setViewport = function(element, viewport) {
+        this.setViewport = function (element, viewport) {
             ignoreFiredEvents = true;
             cornerstone.setViewport(element, viewport);
             ignoreFiredEvents = false;
